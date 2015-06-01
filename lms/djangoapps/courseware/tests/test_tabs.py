@@ -182,9 +182,9 @@ class TextbooksTestCase(TabTestCase):
 
         self.dict_tab = MagicMock()
         self.course.tabs = [
-            xmodule_tabs.CourseTab.from_json({'type': 'textbooks'}),
-            xmodule_tabs.CourseTab.from_json({'type': 'pdf_textbooks'}),
-            xmodule_tabs.CourseTab.from_json({'type': 'html_textbooks'}),
+            xmodule_tabs.CourseTab.load('textbooks'),
+            xmodule_tabs.CourseTab.load('pdf_textbooks'),
+            xmodule_tabs.CourseTab.load('html_textbooks'),
         ]
         self.num_textbook_tabs = sum(1 for tab in self.course.tabs if tab.type in [
             'textbooks', 'pdf_textbooks', 'html_textbooks'
@@ -225,9 +225,7 @@ class StaticTabDateTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
             category="static_tab", parent_location=self.course.location,
             data="OOGIE BLOOGIE", display_name="new_tab"
         )
-        self.course.tabs.append(xmodule_tabs.CourseTab.from_json({
-            'type': 'static_tab', 'name': 'New Tab', 'url_slug': 'new_tab',
-        }))
+        self.course.tabs.append(xmodule_tabs.CourseTab.load('static_tab', name='New Tab', url_slug='new_tab'))
         self.course.save()
         self.toy_course_key = SlashSeparatedCourseKey('edX', 'toy', '2012_Fall')
 
@@ -464,7 +462,7 @@ class TextBookCourseViewsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
 
     @patch.dict("django.conf.settings.FEATURES", {"ENABLE_TEXTBOOK": False})
     def test_textbooks_disabled(self):
-        tab = xmodule_tabs.CourseTab.from_json({'type': 'textbooks'})
+        tab = xmodule_tabs.CourseTab.load('textbooks')
         self.assertFalse(tab.is_enabled(self.course, self.user))
 
 
@@ -712,7 +710,7 @@ class DiscussionLinkTestCase(TabTestCase):
         super(DiscussionLinkTestCase, self).setUp()
 
         self.tabs_with_discussion = [
-            xmodule_tabs.CourseTab.from_json({'type': 'discussion'}),
+            xmodule_tabs.CourseTab.load('discussion'),
         ]
         self.tabs_without_discussion = [
         ]

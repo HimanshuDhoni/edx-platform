@@ -63,7 +63,7 @@ class CourseTabTest(ModuleStoreTestCase):
 
     def enable_notes(self):
         """Enable notes and add the tab to the course."""
-        self.course.tabs.append(CourseTab.from_json({"type": "notes", "name": "My Notes"}))
+        self.course.tabs.append(CourseTab.load("notes"))
         self.course.advanced_modules = ["notes"]
 
     def has_notes_tab(self, course, user):

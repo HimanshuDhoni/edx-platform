@@ -277,7 +277,7 @@ class ItemFactory(XModuleFactory):
 
                 course = store.get_course(location.course_key)
                 course.tabs.append(
-                    CourseTab.from_json({'type': 'static_tab', 'name': 'Static Tab', 'url_slug': location.name})
+                    CourseTab.load('static_tab', name='Static Tab', url_slug=location.name)
                 )
                 store.update_item(course, user_id)
 

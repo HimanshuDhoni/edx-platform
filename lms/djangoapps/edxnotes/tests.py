@@ -32,7 +32,7 @@ def enable_edxnotes_for_the_course(course, user_id):
     """
     Enable EdxNotes for the course.
     """
-    course.tabs.append(CourseTab.from_json({"type": "edxnotes", "name": "Notes"}))
+    course.tabs.append(CourseTab.load("edxnotes"))
     modulestore().update_item(course, user_id)
 
 

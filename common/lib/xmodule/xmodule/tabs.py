@@ -31,6 +31,9 @@ class CourseTab(object):
     # Class property that specifies whether the tab can be hidden for a particular course
     is_hideable = False
 
+    # Class property that specifies whether the tab is hidden for a particular course
+    is_hidden = False
+
     # Class property that specifies whether the tab can be moved within a course's list of tabs
     is_movable = True
 
@@ -143,6 +146,22 @@ class CourseTab(object):
         """
         return key_checker(['type'])(tab_dict, raise_error)
 
+    @classmethod
+    def load(cls, type_name, **kwargs):
+        """
+        Constructs a tab of the given type_name.
+
+        Args:
+            type_name (str) - the type of tab that should be constructed
+            **kwargs - any other keyword arguments needed for constructing this tab
+
+        Returns:
+            an instance of the CourseTab subclass that matches the type_name
+        """
+        json_dict = kwargs.copy()
+        json_dict['type'] = type_name
+        return cls.from_json(json_dict)
+
     def to_json(self):
         """
         Serializes the necessary members of the CourseTab object to a json-serializable representation.
@@ -174,11 +193,14 @@ class CourseTab(object):
         # TODO: don't import openedx capabilities from common
         from openedx.core.djangoapps.course_views.course_views import CourseViewTypeManager
         tab_type_name = tab_dict.get('type')
+        if tab_type_name is None:
+            log.error('No type included in tab_dict: %r', tab_dict)
+            return None
         try:
             tab_type = CourseViewTypeManager.get_plugin(tab_type_name)
         except PluginError:
             log.exception(
-                "Unknown tab type %r Known types: %r",
+                "Unknown tab type %r Known types: %r.",
                 tab_type_name,
                 CourseViewTypeManager.get_course_view_types()
             )
@@ -205,29 +227,29 @@ class CourseTabList(List):
         """
 
         course.tabs.extend([
-            CourseTab.from_json({'type': 'courseware', 'name': _('Courseware')}),
-            CourseTab.from_json({'type': 'course_info', 'name': _('Course Info')})
+            CourseTab.load('courseware'),
+            CourseTab.load('course_info')
         ])
 
         # Presence of syllabus tab is indicated by a course attribute
         if hasattr(course, 'syllabus_present') and course.syllabus_present:
-            course.tabs.append(CourseTab.from_json({'type': 'syllabus', 'name': _('Syllabus')}))
+            course.tabs.append(CourseTab.load('syllabus'))
 
         # If the course has a discussion link specified, use that even if we feature
         # flag discussions off. Disabling that is mostly a server safety feature
         # at this point, and we don't need to worry about external sites.
         if course.discussion_link:
-            discussion_tab = CourseTab.from_json(
-                {'type': 'external_discussion', 'name': _('External Discussion'), 'link': course.discussion_link}
+            discussion_tab = CourseTab.load(
+                'external_discussion', name=_('External Discussion'), link=course.discussion_link
             )
         else:
-            discussion_tab = CourseTab.from_json({'type': 'discussion', 'name': _('Discussion')})
+            discussion_tab = CourseTab.load('discussion')
 
         course.tabs.extend([
-            CourseTab.from_json({'type': 'textbooks', 'name': _('Textbooks')}),
+            CourseTab.load('textbooks'),
             discussion_tab,
-            CourseTab.from_json({'type': 'wiki', 'name': _('Wiki')}),
-            CourseTab.from_json({'type': 'progress', 'name': _('Progress')}),
+            CourseTab.load('wiki'),
+            CourseTab.load('progress'),
         ])
 
     @staticmethod
@@ -239,8 +261,8 @@ class CourseTabList(List):
 
         # the discussion_link setting overrides everything else, even if there is a discussion tab in the course tabs
         if course.discussion_link:
-            return CourseTab.from_json(
-                {'type': 'external_discussion', 'name': _('External Discussion'), 'link': course.discussion_link}
+            return CourseTab.load(
+                'external_discussion', name=_('External Discussion'), link=course.discussion_link
             )
 
         # find one of the discussion tab types in the course tabs
@@ -277,7 +299,7 @@ class CourseTabList(List):
         the given user with the provided access settings.
         """
         for tab in course.tabs:
-            if tab.is_enabled(course, user=user) and (not user or not tab.is_hideable or not tab.is_hidden):
+            if tab.is_enabled(course, user=user) and not (user and tab.is_hidden):
                 if tab.is_collection:
                     # If rendering inline that add each item in the collection,
                     # else just show the tab itself as long as it is not empty.

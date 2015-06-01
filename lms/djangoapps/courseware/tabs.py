@@ -18,7 +18,7 @@ class EnrolledCourseViewType(CourseViewType):
     """
     @classmethod
     def is_enabled(cls, course, user=None):
-        if not user:
+        if user is None:
             return True
         return CourseEnrollment.is_enrolled(user, course.id) or has_access(user, 'staff', course, course.id)
 
@@ -63,7 +63,7 @@ class SyllabusCourseViewType(EnrolledCourseViewType):
     def is_enabled(cls, course, user=None):  # pylint: disable=unused-argument
         if not super(SyllabusCourseViewType, cls).is_enabled(course, user=user):
             return False
-        return hasattr(course, 'syllabus_present') and course.syllabus_present
+        return getattr(course, 'syllabus_present', False)
 
 
 class ProgressCourseViewType(EnrolledCourseViewType):
@@ -110,6 +110,7 @@ class TextbookCourseViews(TextbookCourseViewsBase):
     """
     name = 'textbooks'
     priority = None
+    view_name = 'book'
 
     @classmethod
     def is_enabled(cls, course, user=None):  # pylint: disable=unused-argument
@@ -122,9 +123,8 @@ class TextbookCourseViews(TextbookCourseViewsBase):
             yield SingleTextbookTab(
                 name=textbook.title,
                 tab_id='textbook/{0}'.format(index),
-                link_func=lambda course, reverse_func, index=index: reverse_func(
-                    'book', args=[course.id.to_deprecated_string(), index]
-                ),
+                view_name=cls.view_name,
+                index=index
             )
 
 
@@ -134,6 +134,7 @@ class PDFTextbookCourseViews(TextbookCourseViewsBase):
     """
     name = 'pdf_textbooks'
     priority = None
+    view_name = 'pdf_book'
 
     @classmethod
     def items(cls, course):
@@ -141,9 +142,8 @@ class PDFTextbookCourseViews(TextbookCourseViewsBase):
             yield SingleTextbookTab(
                 name=textbook['tab_title'],
                 tab_id='pdftextbook/{0}'.format(index),
-                link_func=lambda course, reverse_func, index=index: reverse_func(
-                    'pdf_book', args=[course.id.to_deprecated_string(), index]
-                ),
+                view_name=cls.view_name,
+                index=index
             )
 
 
@@ -153,6 +153,7 @@ class HtmlTextbookCourseViews(TextbookCourseViewsBase):
     """
     name = 'html_textbooks'
     priority = None
+    view_name = 'html_book'
 
     @classmethod
     def items(cls, course):
@@ -160,9 +161,8 @@ class HtmlTextbookCourseViews(TextbookCourseViewsBase):
             yield SingleTextbookTab(
                 name=textbook['tab_title'],
                 tab_id='htmltextbook/{0}'.format(index),
-                link_func=lambda course, reverse_func, index=index: reverse_func(
-                    'html_book', args=[course.id.to_deprecated_string(), index]
-                ),
+                view_name=cls.view_name,
+                index=index
             )
 
 
@@ -302,6 +302,13 @@ class SingleTextbookTab(CourseTab):
     is_movable = False
     is_collection_item = True
     priority = None
+
+    def __init__(self, name, tab_id, view_name, index):
+        def link_func(course, reverse_func, index=index):
+            """ Constructs a link for textbooks from a view name, a course, and an index. """
+            return reverse_func(view_name, args=[unicode(course.id), index])
+
+        super(SingleTextbookTab, self).__init__(name, tab_id, link_func)
 
     def to_json(self):
         raise NotImplementedError('SingleTextbookTab should not be serialized.')
